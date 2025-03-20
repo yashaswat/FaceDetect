@@ -82,13 +82,13 @@ def webcam_recognition(model, threshold):
 
 # env variable to download model weights in current folder
 os.environ['DEEPFACE_HOME'] = 'C:/Users/YASHASWAT/Desktop/FaceDetect/' 
-DeepFace.build_model("VGG-Face") # download model weights
+DeepFace.build_model("Facenet") # download model weights
 
 # loading reference image for verification
 reference_img = cv.imread('Verified Faces/yash_face2.jpg')
 face_match = False # face match flag
 
-model = 'VGG-Face' # model to use for face recognition
+model = 'Facenet' # model to use for face recognition
 threshold = 0.4 # threshold for embedding distance
 
 webcam_recognition(model, threshold)
