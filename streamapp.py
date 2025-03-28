@@ -10,7 +10,7 @@ if 'view' not in st.session_state:
     st.session_state.view = 'home'
 
 
-@st.cache_resource
+# @st.cache_resource
 def get_model(model_name):
     
     os.environ['DEEPFACE_HOME'] = 'C:/Users/YASHASWAT/Desktop/FaceDetect/'
@@ -42,15 +42,19 @@ def face_recog(img):
     
     try:
         
-        recog = DeepFace.verify(cv2_img, reference, model_name='Facenet', 
-                           detector_backend='opencv', align=True, threshold=0.45, normalization='Facenet')
+        recog = DeepFace.find(cv2_img, db_path='Verified Faces/', model_name='Facenet', threshold=0.25, 
+                       detector_backend='opencv', distance_metric='cosine', align=True, normalization='Facenet')
+        print(recog[0]['identity'])
         
-        if recog['verified']:
-            st.header('True')
-            st.subheader(f'Distance: {recog['distance']}')
+        if recog[0].shape[0]:
+            st.header(':green[Identity Verified] :heavy_check_mark:')
+            identity = recog[0]['identity'][0].lstrip('Verified Faces/').rstrip('.jpg').split('_')
+            name = identity[0] + ' ' + identity[1]
+            st.subheader(f'Name: {name}')
+            st.subheader(f'Similarity: {round(100*(1- recog[0]['distance'][0]), 2)}%')
         else:
-            st.header('False')
-            st.subheader(f'Distance: {recog['distance']}')
+            st.header(':red[Person Not Found] :heavy_multiplication_x:')
+            
     except ValueError:
         st.header('False')
         st.subheader(f'Distance: {recog['distance']}')
