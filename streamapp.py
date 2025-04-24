@@ -1,5 +1,5 @@
 import os
-import time
+import base64
 
 import streamlit as st
 from PIL import Image
@@ -38,9 +38,14 @@ def change_state(state):
         
     if state == 'add_emp':
         st.session_state.view = 'add_emp'
+        
+    if state == 'check':
+        st.session_state.view = 'check'
 
 
 def mark_attendance(first_name, last_name, similarity):
+    
+    print('Marking...')
     
     file_name = 'attendance.csv'
     entry = {
@@ -49,7 +54,7 @@ def mark_attendance(first_name, last_name, similarity):
         'similarity score': similarity,
         'date': datetime.now().date(),
         'timestamp': datetime.now().time(),
-        'image path': f'{first_name}_{last_name}.jpg'
+        'image path': f'http://localhost:8501/app/static/{first_name}_{last_name}.jpg'
     }
     
     if os.path.exists(file_name):
@@ -76,8 +81,8 @@ def face_recog(img):
         result_box = st.container(border=True)
         
         if recog[0].shape[0]:
-            result_box.subheader(':green[Identity Verified] :heavy_check_mark:')
-            identity = recog[0]['identity'][0].lstrip('Verified Faces/').rstrip('.jpg').split('_')
+            result_box.subheader(':green[Identity Verified] ✅', anchor=False)
+            identity = recog[0]['identity'][0].lstrip(f'{DB_PATH}/').rstrip('.jpg').split('_')
             
             first_name = identity[0]
             last_name = identity[1]
@@ -90,14 +95,15 @@ def face_recog(img):
             st.success('Attendance marked!', icon='✅')
             
         else:
-            result_box.header(':red[Person Not Found] :heavy_multiplication_x:')
+            result_box.subheader(':red[Person Not Found] :x:', anchor=False)
             
     except ValueError:
-        st.header(':red[Person Not Found] :heavy_multiplication_x:')
+        pass
+    #     st.subheader(':red[Person Not Found] :heavy_multiplication_x:', anchor=False)
 
 
 def save_employee(fname, lname, image):
-    with open(f'Verified Faces/{fname}_{lname}.jpg', 'wb') as file:
+    with open(f'{DB_PATH}/{fname}_{lname}.jpg', 'wb') as file:
         file.write(image.getvalue())
     print('EMP IMAGE SAVED.')
 
@@ -112,9 +118,9 @@ col1, col2 = st.columns([0.3, 0.7], vertical_alignment='center')
 col1.image('excellent_logo.png')
 col2.title('FaceDetect Attendance System', anchor=False)
 st.subheader('Mark your attendance, the easy way...', anchor=False)
+st.divider()
 
-
-DB_PATH = 'Verified Faces/'
+DB_PATH = 'static/'
 
 if st.session_state.view == 'home':
     
@@ -124,7 +130,10 @@ if st.session_state.view == 'home':
     st.write('\n')
     add_emp = st.button('Add Employee', use_container_width=True, type='primary',
                         on_click=change_state, args=('add_emp',))
-
+    st.write('\n')
+    view_att = st.button('View Attendance', use_container_width=True, type='primary',
+                        on_click=change_state, args=('check',))  
+    
 if st.session_state.view == 'attendance':
     
     st.header('Employee Attendance', anchor=False)
@@ -142,6 +151,7 @@ if st.session_state.view == 'attendance':
         
 if st.session_state.view == 'add_emp':
     
+    info = st.empty()
     emp_photo = None
     st.header('Add new employee', anchor=False)
     
@@ -156,7 +166,7 @@ if st.session_state.view == 'add_emp':
             emp_photo = st.file_uploader('Upload your passport size photo: ', type=['jpg', 'jpeg'])
         if img_type == 'Capture':
             emp_photo = st.camera_input('Capture your image: ')
-            st.info('Please keep only your shoulder up view in the camera frame.')
+            info = st.info('Please keep only your shoulder up view in the camera frame.')
             
 
         st.write('\n')
@@ -164,10 +174,37 @@ if st.session_state.view == 'add_emp':
         submit = button1.button('Submit', type='primary', use_container_width=True,
                            on_click=save_employee, args=(emp_fname, emp_lname, emp_photo))
         if submit:
+            info.empty()
             st.success('Employee Identity added to Database!')
         reset_form = button2.button('Reset Form', use_container_width=True,
                                     on_click=clear_form)
 
     st.write('\n')
     st.button('Back to Home', on_click=change_state, args=('home',))
+
+if st.session_state.view == 'check':
+    
+    st.header('Employee Attendance Record', anchor=False)
+    
+    st.write('\n')
+    edit_mode = st.toggle('Edit Mode')
+    
+    attendance = pd.read_csv('attendance.csv')
+    display_box = st.container(border=True)
+    mode_badge = display_box.empty()
+    table_box = display_box.empty()
+    
+    st.write('\n')
+    st.button('Back to Home', on_click=change_state, args=('home',))
+    
+    if edit_mode:
+        mode_badge.badge('Edit Mode', color='orange', icon=':material/edit_note:')
+        table_box.data_editor(attendance, num_rows='dynamic', use_container_width=True)
+    else:
+        mode_badge.badge('View Mode', color='violet', icon=':material/visibility:')
+        table_box.dataframe(attendance, use_container_width=True,
+                              column_config={
+                                  'image path': st.column_config.ImageColumn('Employee Photo', pinned=True)
+                              })
+    
     
