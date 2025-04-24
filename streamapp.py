@@ -108,17 +108,22 @@ def clear_form():
     st.session_state.emp_lname = ''
 
 
-col1, col2, col3 = st.columns(3)
-col2.title('FaceDetect', anchor=False)
+col1, col2 = st.columns([0.3, 0.7], vertical_alignment='center')
+col1.image('excellent_logo.png')
+col2.title('FaceDetect Attendance System', anchor=False)
+st.subheader('Mark your attendance, the easy way...', anchor=False)
+
 
 DB_PATH = 'Verified Faces/'
 
 if st.session_state.view == 'home':
     
     st.write('\n')
-    attend = st.button('Take Attendance', use_container_width=True, on_click=change_state, args=('attendance',))
+    attend = st.button('Take Attendance', use_container_width=True, type='primary',
+                       on_click=change_state, args=('attendance',))
     st.write('\n')
-    add_emp = st.button('Add Employee', use_container_width=True, on_click=change_state, args=('add_emp',))
+    add_emp = st.button('Add Employee', use_container_width=True, type='primary',
+                        on_click=change_state, args=('add_emp',))
 
 if st.session_state.view == 'attendance':
     
@@ -132,7 +137,8 @@ if st.session_state.view == 'attendance':
     
     instruction.empty()
     st.write('\n')
-    st.button('Back to Home', on_click=change_state, args=('home',))
+    st.button('Back to Home', type='secondary',
+              on_click=change_state, args=('home',))
         
 if st.session_state.view == 'add_emp':
     
