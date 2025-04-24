@@ -1,4 +1,5 @@
 import os
+import time
 
 import streamlit as st
 from PIL import Image
@@ -11,6 +12,10 @@ from datetime import datetime
 
 if 'view' not in st.session_state:
     st.session_state.view = 'home'
+if 'emp_fname' not in st.session_state:
+    st.session_state.emp_fname = ''
+if 'emp_lname' not in st.session_state:
+    st.session_state.emp_lname = ''
 
 
 # @st.cache_resource
@@ -42,8 +47,9 @@ def mark_attendance(first_name, last_name, similarity):
         'first name': first_name,
         'last name': last_name,
         'similarity score': similarity,
-        'date': datetime.now().time(),
-        'timestamp': datetime.now().time()
+        'date': datetime.now().date(),
+        'timestamp': datetime.now().time(),
+        'image path': f'{first_name}_{last_name}.jpg'
     }
     
     if os.path.exists(file_name):
@@ -51,7 +57,7 @@ def mark_attendance(first_name, last_name, similarity):
         df = pd.read_csv('attendance.csv')
         df = pd.concat([df, pd.DataFrame([entry])], ignore_index=True)
     else:
-        pd.DataFrame([entry])
+        df = pd.DataFrame([entry])
     
     df.to_csv(file_name, index=False)
 
@@ -67,34 +73,51 @@ def face_recog(img):
                        detector_backend='opencv', distance_metric='cosine', align=True, normalization='Facenet')
         print(recog[0]['identity'])
         
+        result_box = st.container(border=True)
+        
         if recog[0].shape[0]:
-            st.header(':green[Identity Verified] :heavy_check_mark:')
+            result_box.subheader(':green[Identity Verified] :heavy_check_mark:')
             identity = recog[0]['identity'][0].lstrip('Verified Faces/').rstrip('.jpg').split('_')
             
             first_name = identity[0]
             last_name = identity[1]
             similarity = round(100*(1- recog[0]['distance'][0]), 2)
             
-            st.subheader(f'Name: {first_name} {last_name}')
-            st.subheader(f'Similarity: {similarity}%')
+            result_box.write(f'**Name**: {first_name} {last_name}')
+            result_box.write(f'**Similarity**: {similarity}%')
             
             mark_attendance(first_name, last_name, similarity)
             st.success('Attendance marked!', icon='✅')
             
         else:
-            st.header(':red[Person Not Found] :heavy_multiplication_x:')
+            result_box.header(':red[Person Not Found] :heavy_multiplication_x:')
             
     except ValueError:
         st.header(':red[Person Not Found] :heavy_multiplication_x:')
 
+
+def save_employee(fname, lname, image):
+    with open(f'Verified Faces/{fname}_{lname}.jpg', 'wb') as file:
+        file.write(image.getvalue())
+    print('EMP IMAGE SAVED.')
+
+
+def clear_form():
+    
+    st.session_state.emp_fname = ''
+    st.session_state.emp_lname = ''
+
+
 col1, col2, col3 = st.columns(3)
 col2.title('FaceDetect', anchor=False)
 
-DB_PATH = 'Verified Faces'
+DB_PATH = 'Verified Faces/'
 
 if st.session_state.view == 'home':
     
+    st.write('\n')
     attend = st.button('Take Attendance', use_container_width=True, on_click=change_state, args=('attendance',))
+    st.write('\n')
     add_emp = st.button('Add Employee', use_container_width=True, on_click=change_state, args=('add_emp',))
 
 if st.session_state.view == 'attendance':
@@ -102,22 +125,24 @@ if st.session_state.view == 'attendance':
     st.header('Employee Attendance', anchor=False)
     
     cam_photo = st.camera_input('Capture your image: ')
-    st.info('Please keep only your shoulder up view in the camera frame.')
+    instruction = st.info('Please keep only your shoulder up view in the camera frame.')
 
     if cam_photo is not None:
         face_recog(cam_photo)
     
+    instruction.empty()
     st.write('\n')
     st.button('Back to Home', on_click=change_state, args=('home',))
         
 if st.session_state.view == 'add_emp':
     
+    emp_photo = None
     st.header('Add new employee', anchor=False)
     
     with st.container(border=True):
         
-        emp_fname = st.text_input('Enter first name: ')
-        emp_lname = st.text_input('Enter last name: ')
+        emp_fname = st.text_input('Enter first name: ', key='emp_fname')
+        emp_lname = st.text_input('Enter last name: ', key='emp_lname')
         
         img_type = st.segmented_control('Add photo: ', options = ['Upload', 'Capture'])
                 
@@ -127,10 +152,16 @@ if st.session_state.view == 'add_emp':
             emp_photo = st.camera_input('Capture your image: ')
             st.info('Please keep only your shoulder up view in the camera frame.')
             
-        
+
         st.write('\n')
-        submit = st.button('Submit', type='primary', use_container_width=True)
-        
+        button1, button2 = st.columns([0.7, 0.3], gap='medium')
+        submit = button1.button('Submit', type='primary', use_container_width=True,
+                           on_click=save_employee, args=(emp_fname, emp_lname, emp_photo))
+        if submit:
+            st.success('Employee Identity added to Database!')
+        reset_form = button2.button('Reset Form', use_container_width=True,
+                                    on_click=clear_form)
+
     st.write('\n')
     st.button('Back to Home', on_click=change_state, args=('home',))
     
