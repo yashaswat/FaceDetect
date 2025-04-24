@@ -72,14 +72,15 @@ def face_recog(img):
     bytes_data = img.getvalue()
     cv2_img = cv.imdecode(np.frombuffer(bytes_data, np.uint8), cv.IMREAD_COLOR)
     
+    result_box = st.container(border=True)
+    
     try:
         
         recog = DeepFace.find(cv2_img, db_path=DB_PATH, model_name='Facenet', threshold=0.25, 
                        detector_backend='opencv', distance_metric='cosine', align=True, normalization='Facenet')
-        print(recog[0]['identity'])
-        
-        result_box = st.container(border=True)
-        
+        if recog[0].shape[0]:
+            print(recog[0]['identity'])
+                
         if recog[0].shape[0]:
             result_box.subheader(':green[Identity Verified] ✅', anchor=False)
             identity = recog[0]['identity'][0].lstrip(f'{DB_PATH}/').rstrip('.jpg').split('_')
@@ -98,8 +99,7 @@ def face_recog(img):
             result_box.subheader(':red[Person Not Found] :x:', anchor=False)
             
     except ValueError:
-        pass
-    #     st.subheader(':red[Person Not Found] :heavy_multiplication_x:', anchor=False)
+        result_box.subheader(':red[Person Not Found] :x:', anchor=False)
 
 
 def save_employee(fname, lname, image):
@@ -112,6 +112,7 @@ def clear_form():
     
     st.session_state.emp_fname = ''
     st.session_state.emp_lname = ''
+    st.rerun()
 
 
 col1, col2 = st.columns([0.3, 0.7], vertical_alignment='center')
