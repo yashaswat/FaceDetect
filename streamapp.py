@@ -5,6 +5,9 @@ from PIL import Image
 import cv2 as cv
 from deepface import DeepFace
 import numpy as np
+import pandas as pd
+
+from datetime import datetime
 
 if 'view' not in st.session_state:
     st.session_state.view = 'home'
@@ -21,9 +24,7 @@ get_model('Facenet')
 
 
 def change_state(state):
-    
-    print(st.session_state.view)
-    
+        
     if state == 'home':
         st.session_state.view = 'home'
     
@@ -34,35 +35,62 @@ def change_state(state):
         st.session_state.view = 'add_emp'
 
 
+def mark_attendance(first_name, last_name, similarity):
+    
+    file_name = 'attendance.csv'
+    entry = {
+        'first name': first_name,
+        'last name': last_name,
+        'similarity score': similarity,
+        'date': datetime.now().time(),
+        'timestamp': datetime.now().time()
+    }
+    
+    if os.path.exists(file_name):
+        
+        df = pd.read_csv('attendance.csv')
+        df = pd.concat([df, pd.DataFrame([entry])], ignore_index=True)
+    else:
+        pd.DataFrame([entry])
+    
+    df.to_csv(file_name, index=False)
+
+
 def face_recog(img):
     
-    global reference    
     bytes_data = img.getvalue()
     cv2_img = cv.imdecode(np.frombuffer(bytes_data, np.uint8), cv.IMREAD_COLOR)
     
     try:
         
-        recog = DeepFace.find(cv2_img, db_path='Verified Faces/', model_name='Facenet', threshold=0.25, 
+        recog = DeepFace.find(cv2_img, db_path=DB_PATH, model_name='Facenet', threshold=0.25, 
                        detector_backend='opencv', distance_metric='cosine', align=True, normalization='Facenet')
         print(recog[0]['identity'])
         
         if recog[0].shape[0]:
             st.header(':green[Identity Verified] :heavy_check_mark:')
             identity = recog[0]['identity'][0].lstrip('Verified Faces/').rstrip('.jpg').split('_')
-            name = identity[0] + ' ' + identity[1]
-            st.subheader(f'Name: {name}')
-            st.subheader(f'Similarity: {round(100*(1- recog[0]['distance'][0]), 2)}%')
+            
+            first_name = identity[0]
+            last_name = identity[1]
+            similarity = round(100*(1- recog[0]['distance'][0]), 2)
+            
+            st.subheader(f'Name: {first_name} {last_name}')
+            st.subheader(f'Similarity: {similarity}%')
+            
+            mark_attendance(first_name, last_name, similarity)
+            st.success('Attendance marked!', icon='✅')
+            
         else:
             st.header(':red[Person Not Found] :heavy_multiplication_x:')
             
     except ValueError:
-        st.header('False')
-        st.subheader(f'Distance: {recog['distance']}')
+        st.header(':red[Person Not Found] :heavy_multiplication_x:')
 
 col1, col2, col3 = st.columns(3)
 col2.title('FaceDetect', anchor=False)
 
-reference = 'Verified Faces/yash_pport.jpg'
+DB_PATH = 'Verified Faces'
 
 if st.session_state.view == 'home':
     
@@ -78,6 +106,9 @@ if st.session_state.view == 'attendance':
 
     if cam_photo is not None:
         face_recog(cam_photo)
+    
+    st.write('\n')
+    st.button('Back to Home', on_click=change_state, args=('home',))
         
 if st.session_state.view == 'add_emp':
     
@@ -95,7 +126,11 @@ if st.session_state.view == 'add_emp':
         if img_type == 'Capture':
             emp_photo = st.camera_input('Capture your image: ')
             st.info('Please keep only your shoulder up view in the camera frame.')
+            
         
         st.write('\n')
         submit = st.button('Submit', type='primary', use_container_width=True)
+        
+    st.write('\n')
+    st.button('Back to Home', on_click=change_state, args=('home',))
     
