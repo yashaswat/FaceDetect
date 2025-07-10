@@ -25,7 +25,7 @@ def get_model(model_name):
     os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
     
     DeepFace.build_model(model_name)
-get_model('Facenet')
+model = get_model('Facenet')
 
 
 def change_state(state):
@@ -93,6 +93,7 @@ def face_recog(img):
             result_box.write(f'**Similarity**: {similarity}%')
             
             mark_attendance(first_name, last_name, similarity)
+            instruction.empty()
             st.success('Attendance marked!', icon='✅')
             
         else:
@@ -118,7 +119,7 @@ def clear_form():
 col1, col2 = st.columns([0.3, 0.7], vertical_alignment='center')
 col1.image('excellent_logo.png')
 col2.title('FaceDetect Attendance System', anchor=False)
-st.subheader('Mark your attendance, the easy way...', anchor=False)
+st.subheader('Mark your attendance, the Excellent way...', anchor=False)
 st.divider()
 
 DB_PATH = 'static/'
@@ -140,12 +141,11 @@ if st.session_state.view == 'attendance':
     st.header('Employee Attendance', anchor=False)
     
     cam_photo = st.camera_input('Capture your image: ')
-    instruction = st.info('Please keep only your shoulder up view in the camera frame.')
+    instruction = st.info('Please keep only your shoulder-up view in the camera frame and look straight.')
 
     if cam_photo is not None:
         face_recog(cam_photo)
-    
-    instruction.empty()
+
     st.write('\n')
     st.button('Back to Home', type='secondary',
               on_click=change_state, args=('home',))
@@ -167,9 +167,8 @@ if st.session_state.view == 'add_emp':
             emp_photo = st.file_uploader('Upload your passport size photo: ', type=['jpg', 'jpeg'])
         if img_type == 'Capture':
             emp_photo = st.camera_input('Capture your image: ')
-            info = st.info('Please keep only your shoulder up view in the camera frame.')
+            info = st.info('Please keep only your shoulder-up view in the camera frame and look straight.')
             
-
         st.write('\n')
         button1, button2 = st.columns([0.7, 0.3], gap='medium')
         submit = button1.button('Submit', type='primary', use_container_width=True,
